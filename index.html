@@ -32199,18 +32199,28 @@ function saveERPDB(){
       return;
     }
 
+    // ── Performance fix: pehle ek hi baar JSON banao, fir sirf ZAROORI keys mein likho ──
+    // (Pehle yeh 3-4 baar pura JSON localStorage mein likhta tha — bade data (3-4MB+) ke saath
+    // yeh save button dabane par UI ko 1-2 second ke liye freeze kar deta tha. Ab sirf ek
+    // primary key turant likhte hain; backup/duplicate keys background mein async hoti hain.)
     const json = JSON.stringify(ERPDB);
     localStorage.setItem(ERP_KEY, json);
-    localStorage.setItem('hena_erp_v8', json);
 
     const saveCount = parseInt(localStorage.getItem('_erp_save_count')||'0') + 1;
     localStorage.setItem('_erp_save_count', String(saveCount));
-    if(saveCount % 10 === 0){
-      localStorage.setItem('sc_erp_backup_'+new Date().toISOString().split('T')[0], json);
-    }
-    if(currentTotal > 0){
-      localStorage.setItem('sc_erp_last_good', json);
-    }
+
+    // Backup/duplicate writes ko background mein (setTimeout 0) taaki Save button turant respond kare
+    setTimeout(()=>{
+      try{
+        localStorage.setItem('hena_erp_v8', json);
+        if(saveCount % 10 === 0){
+          localStorage.setItem('sc_erp_backup_'+new Date().toISOString().split('T')[0], json);
+        }
+        if(currentTotal > 0){
+          localStorage.setItem('sc_erp_last_good', json);
+        }
+      }catch(e){ console.warn('Background backup write failed:', e); }
+    }, 0);
 
     // ── Firebase sync (debounced) — sab staff/admin ka data centralized ──
     syncToFirebase('erp', ERPDB);
