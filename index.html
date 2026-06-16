@@ -40827,53 +40827,58 @@ function saveS(action='save'){
 }
 
 function saveR(action='save'){
-  if(!v('r_cn')){toast2('Credit Note No. zaroori hai!',true);return}
-  if(!v('r_cust')){toast2('Customer naam zaroori hai!',true);return}
-  const items=getItemsFromTable('r');
-  const taxable=getSubtotal('r');
-  if(!taxable){toast2('Return amount dalein!',true);return}
-  const gp=+document.getElementById('r_gstpct').value||0;
-  const gamt=taxable*gp/100,grand=taxable+gamt;
-  const entry={
-    sr:'CN-'+String(rc).padStart(4,'0'),date:v('r_date'),cn:v('r_cn'),orig:v('r_orig'),
-    cust:v('r_cust'),reason:v('r_reason'),refund:v('r_refund'),
-    cgst:v('r_cgst'),addr:v('r_addr'),items,
-    gstpct:gp,taxable,gamt,grand,ts:Date.now(),_isReturn:true
-  };
-  DB.returns.push(entry);
-  // Auto refund payment entry (Adjustment nahi hai toh turant refund diya maano)
-  if(entry.refund && entry.refund !== 'Adjustment'){
-    DB.payments.push({
-      sr:'PY-'+String(pyc).padStart(4,'0'),
-      date:entry.date,
-      cust:entry.cust||'',
-      amt:entry.grand,
-      mode:entry.refund,
-      ref:entry.cn,
-      rmk:'Auto: Return Refund '+entry.sr,
-      _isRefund:true,
-      ts:Date.now()+1
-    });
-    pyc++;
-  }
-  rc++;updSR();
-  updNetSales();updCounts();lsSave();lsStatus();updEntryCounts();renderSalesEntries();
-  // Show post-return outstanding summary
-  const map2=getCustomerLedger();
-  const partyAfter=map2[entry.cust];
-  let outMsg='';
-  if(partyAfter){
-    const due=partyAfter.due;
-    if(due>0.5) outMsg=` | ${entry.cust} ka baaki: ₹${due.toFixed(0)}`;
-    else outMsg=` | ${entry.cust} — Outstanding CLEAR ✓`;
-  }
-  clrR();
-  toast2('✓ Return saved!'+(entry.refund!=='Adjustment'?' | Refund entry ✓':' | Adjustment se Outstanding adjust ✓')+outMsg);
-  if(action==='print'){showReturnInvoice(entry,true);}
-  else if(action==='whatsapp'){openWAReturnInvoice(entry);}
-  else{
-    // Show return outstanding modal
-    if(partyAfter) showReturnOutstandingSummary(entry, partyAfter);
+  try{
+    if(!v('r_cn')){toast2('Credit Note No. zaroori hai!',true);return}
+    if(!v('r_cust')){toast2('Customer naam zaroori hai!',true);return}
+    const items=getItemsFromTable('r');
+    const taxable=getSubtotal('r');
+    if(!taxable){toast2('Return amount dalein!',true);return}
+    const gp=+document.getElementById('r_gstpct').value||0;
+    const gamt=taxable*gp/100,grand=taxable+gamt;
+    const entry={
+      sr:'CN-'+String(rc).padStart(4,'0'),date:v('r_date'),cn:v('r_cn'),orig:v('r_orig'),
+      cust:v('r_cust'),reason:v('r_reason'),refund:v('r_refund'),
+      cgst:v('r_cgst'),addr:v('r_addr'),items,
+      gstpct:gp,taxable,gamt,grand,ts:Date.now(),_isReturn:true
+    };
+    DB.returns.push(entry);
+    // Auto refund payment entry (Adjustment nahi hai toh turant refund diya maano)
+    if(entry.refund && entry.refund !== 'Adjustment'){
+      DB.payments.push({
+        sr:'PY-'+String(pyc).padStart(4,'0'),
+        date:entry.date,
+        cust:entry.cust||'',
+        amt:entry.grand,
+        mode:entry.refund,
+        ref:entry.cn,
+        rmk:'Auto: Return Refund '+entry.sr,
+        _isRefund:true,
+        ts:Date.now()+1
+      });
+      pyc++;
+    }
+    rc++;updSR();
+    updNetSales();updCounts();lsSave();lsStatus();updEntryCounts();renderSalesEntries();
+    // Show post-return outstanding summary
+    const map2=getCustomerLedger();
+    const partyAfter=map2[entry.cust];
+    let outMsg='';
+    if(partyAfter){
+      const due=partyAfter.due;
+      if(due>0.5) outMsg=` | ${entry.cust} ka baaki: ₹${due.toFixed(0)}`;
+      else outMsg=` | ${entry.cust} — Outstanding CLEAR ✓`;
+    }
+    clrR();
+    toast2('✓ Return saved!'+(entry.refund!=='Adjustment'?' | Refund entry ✓':' | Adjustment se Outstanding adjust ✓')+outMsg);
+    if(action==='print'){showReturnInvoice(entry,true);}
+    else if(action==='whatsapp'){openWAReturnInvoice(entry);}
+    else{
+      // Show return outstanding modal
+      if(partyAfter) showReturnOutstandingSummary(entry, partyAfter);
+    }
+  }catch(e){
+    console.error('saveR error:', e);
+    toast2('⚠️ Save error: '+e.message,true);
   }
 }
 
@@ -40933,6 +40938,7 @@ function showReturnOutstanding(){
 }
 
 function saveP(){
+  try{
   // Validations with clear messages
   const billNo = v('p_bill');
   if(!billNo){toast2('⚠️ Bill No. likhein! (e.g. PUR-001)',true);return;}
@@ -41001,9 +41007,14 @@ function saveP(){
   renderPurchaseEntries();
   st('purchase'); // purchase tab dikhao
   toast2('✅ Purchase saved! Bill: '+billNo+' | Amount: ₹'+total.toFixed(0));
+  }catch(e){
+    console.error('saveP error:', e);
+    toast2('⚠️ Save error: '+e.message,true);
+  }
 }
 
 function saveE(){
+  try{
   if(!v('e_name')){toast2('Naam zaroori hai!',true);return}
   const items=getExpItemsFromTable();
   const sub=getSubtotal('e');
@@ -41047,6 +41058,10 @@ function saveE(){
   DB.expense.push(entry);
   ec++;updSR();clrE();toast2('✓ Expense saved!');updCounts();lsSave();lsStatus();updEntryCounts();renderExpenseEntries();
   updExpenseSummaryBar();
+  }catch(e){
+    console.error('saveE error:', e);
+    toast2('⚠️ Save error: '+e.message,true);
+  }
 }
 
 // Toggle salary/office fields based on expense type
@@ -41209,9 +41224,20 @@ function clrE(){
 }
 
 function toast2(msg,err=false){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.className='toast '+(err?'err':'ok');t.style.display='block';
-  setTimeout(()=>t.style.display='none',3000);
+  let t=document.getElementById('toast');
+  if(!t){
+    // Element missing — create it on the fly so messages are never silently lost
+    t=document.createElement('div');
+    t.id='toast';
+    t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99999;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;display:none;box-shadow:0 4px 16px rgba(0,0,0,.2);';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;
+  t.style.background = err ? '#fee2e2' : '#dcfce7';
+  t.style.color = err ? '#dc2626' : '#166534';
+  t.className='toast '+(err?'err':'ok');
+  t.style.display='block';
+  setTimeout(()=>{ if(t) t.style.display='none'; },3000);
 }
 
 function custAutofill(nameId,gstId,addrId,phoneId){
