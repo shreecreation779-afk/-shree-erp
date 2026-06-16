@@ -40787,38 +40787,43 @@ function getSubtotal(prefix){
 
 // ── SAVE FUNCTIONS ──
 function saveS(action='save'){
-  if(!v('s_bill')){toast2('Bill No. zaroori hai!',true);return}
-  const items=getItemsFromTable('s');
-  if(!items.length){toast2('Kam se kam 1 item dalein!',true);return}
-  const taxable=getSubtotal('s');
-  if(!taxable){toast2('Items mein amount dalein!',true);return}
-  const gp=+document.getElementById('s_gstpct').value||0;
-  const gamt=taxable*gp/100,grand=taxable+gamt;
-  const entry={
-    sr:'S-'+String(sc).padStart(4,'0'),date:v('s_date'),bill:v('s_bill'),challan:v('s_challan'),
-    btype:v('s_btype'),pay:v('s_pay'),cust:v('s_cust'),phone:v('s_phone'),
-    cgst:v('s_cgst'),addr:v('s_addr'),items,
-    gstpct:gp,taxable,gamt,grand,ts:Date.now()
-  };
-  DB.sales.push(entry);
-  // Auto payment entry (Credit nahi hai toh turant payment received maano)
-  if(entry.pay && entry.pay !== 'Credit'){
-    DB.payments.push({
-      sr:'PY-'+String(pyc).padStart(4,'0'),
-      date:entry.date,
-      cust:entry.cust||'',
-      amt:entry.grand,
-      mode:entry.pay,
-      ref:entry.bill,
-      rmk:'Auto: Sale '+entry.sr,
-      ts:Date.now()+1
-    });
-    pyc++;
+  try{
+    if(!v('s_bill')){toast2('Bill No. zaroori hai!',true);return}
+    const items=getItemsFromTable('s');
+    if(!items.length){toast2('Kam se kam 1 item dalein!',true);return}
+    const taxable=getSubtotal('s');
+    if(!taxable){toast2('Items mein amount dalein!',true);return}
+    const gp=+document.getElementById('s_gstpct').value||0;
+    const gamt=taxable*gp/100,grand=taxable+gamt;
+    const entry={
+      sr:'S-'+String(sc).padStart(4,'0'),date:v('s_date'),bill:v('s_bill'),challan:v('s_challan'),
+      btype:v('s_btype'),pay:v('s_pay'),cust:v('s_cust'),phone:v('s_phone'),
+      cgst:v('s_cgst'),addr:v('s_addr'),items,
+      gstpct:gp,taxable,gamt,grand,ts:Date.now()
+    };
+    DB.sales.push(entry);
+    // Auto payment entry (Credit nahi hai toh turant payment received maano)
+    if(entry.pay && entry.pay !== 'Credit'){
+      DB.payments.push({
+        sr:'PY-'+String(pyc).padStart(4,'0'),
+        date:entry.date,
+        cust:entry.cust||'',
+        amt:entry.grand,
+        mode:entry.pay,
+        ref:entry.bill,
+        rmk:'Auto: Sale '+entry.sr,
+        ts:Date.now()+1
+      });
+      pyc++;
+    }
+    sc++;updSR();clrS();toast2('✓ Sale saved!'+(entry.pay!=='Credit'?' | Payment received ✓':''));updNetSales();updCounts();lsSave();lsStatus();updEntryCounts();renderSalesEntries();
+    if(action==='print'){showInvoiceFromEntry(entry,true);}
+    else if(action==='whatsapp'){openWAInvoice(entry);}
+    else{showInvoiceFromEntry(entry);}
+  }catch(e){
+    console.error('saveS error:', e);
+    toast2('⚠️ Save error: '+e.message,true);
   }
-  sc++;updSR();clrS();toast2('✓ Sale saved!'+(entry.pay!=='Credit'?' | Payment received ✓':''));updNetSales();updCounts();lsSave();lsStatus();updEntryCounts();renderSalesEntries();
-  if(action==='print'){showInvoiceFromEntry(entry,true);}
-  else if(action==='whatsapp'){openWAInvoice(entry);}
-  else{showInvoiceFromEntry(entry);}
 }
 
 function saveR(action='save'){
